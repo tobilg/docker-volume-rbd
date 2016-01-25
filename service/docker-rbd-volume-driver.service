@@ -1,0 +1,14 @@
+[Unit]
+Description=Docker RBD volume driver
+After=docker.service
+Requires=docker.service
+
+[Service]
+ExecStart=/opt/bin/docker-volume-rdb
+ExecStop=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=on-failure
+RestartSec=30s
+
+[Install]
+WantedBy=multi-user.target

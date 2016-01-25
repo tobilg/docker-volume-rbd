@@ -58,7 +58,7 @@ type rbdDriver struct {
 	defFsType string
 	defSize   int
 	cmd       map[string]string
-	volumes   map[string]*volume
+	volumes   map[string]*_volume
 }
 
 //-----------------------------------------------------------------------------

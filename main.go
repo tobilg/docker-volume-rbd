@@ -28,7 +28,7 @@ import (
 	"path/filepath"
 
 	// Community:
-	"github.com/calavera/dkvolume"
+	"github.com/docker/go-plugins-helpers/volume"
 )
 
 //-----------------------------------------------------------------------------
@@ -47,7 +47,7 @@ const (
 var (
 
 	// Predefined defaults:
-	defVolRoot = filepath.Join(dkvolume.DefaultDockerRootDirectory, id)
+	defVolRoot = filepath.Join(volume.DefaultDockerRootDirectory, id)
 
 	// Flags:
 	volRoot   = flag.String("volroot", defVolRoot, "Docker volumes root directory")
@@ -96,7 +96,7 @@ func main() {
 	// Request handler with a driver implementation
 	log.Printf("[Init] INFO volume root is %s\n", *volRoot)
 	d := initDriver(*volRoot, *defPool, *defFsType, *defSize)
-	h := dkvolume.NewHandler(&d)
+	h := volume.NewHandler(&d)
 
 	// Listen for requests in a unix socket:
 	log.Printf("[Init] INFO listening on %s\n", socket)

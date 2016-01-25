@@ -3,6 +3,9 @@
 # Define target directory
 TARGET_DIR=/opt/bin
 
+# Export target directory to path
+export PATH=$PATH:$TARGET_DIR
+
 # Create target directory if it does not exist
 mkdir -p $TARGET_DIR
 

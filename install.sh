@@ -3,17 +3,14 @@
 # Define target directory
 TARGET_DIR=/opt/bin
 
-# Export target directory to path
-export PATH=$PATH:$TARGET_DIR
-
 # Create target directory if it does not exist
 mkdir -p $TARGET_DIR
 
 # Copy rbd.sh
-cp "$PWD"/scripts/rbd.sh $TARGET_DIR
+cp "$PWD"/scripts/rbd $TARGET_DIR
 
 # Set exec flag
-chmod +x $TARGET_DIR/rbd.sh
+chmod +x $TARGET_DIR/rbd
 
 # Compile using golang image
 docker run --rm -e GOBIN=/usr/src/docker-volume-rdb/bin -v "$PWD"/driver:/usr/src/docker-volume-rdb -w /usr/src/docker-volume-rdb golang:1.4 go get && go build -v 2> error.log

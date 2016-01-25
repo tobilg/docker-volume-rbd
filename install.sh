@@ -22,7 +22,7 @@ cp "$PWD"/driver/bin/docker-volume-rdb $TARGET_DIR
 chmod +x $TARGET_DIR/docker-volume-rdb
 
 # Copy unit files
-cp -r "$PWD"/service/ /etc/systemd/system
+cp -r "$PWD"/service/* /etc/systemd/system
 
 # Reload units
 systemctl daemon-reload

@@ -1,7 +1,44 @@
 # docker-volume-rbd
-A Docker volume driver for RBD
+A Docker volume driver for RBD (mainly for CoreOS)
 
-##### Sample
+## Installation
+
+The volume driver can be installed as `systemd` unit with the `install.sh` script. It will compile the driver via the `golang:1.4` image and place the resulting `docker-volume-rbd` driver in `/opt/bin`. 
+Furthermore, it copies the `rbd` script to `/opt/bin` as well.
+
+### Details
+
+The following steps should be taken to install the RBD volume driver:
+
+#### Enable `rbd` kernel module
+
+```
+core@core-1 ~ $ modprobe rbd
+```
+
+#### Clone the driver 
+
+```
+core@core-1 ~ $ cd /tmp
+core@core-1 ~ $ git clone https://github.com/tobilg/docker-volume-rbd.git
+```
+
+#### Run installation script
+
+```
+core@core-1 ~ $ cd docker-volume-rbd
+core@core-1 ~ $ chmod +x install.sh
+core@core-1 ~ $ sudo ./install.sh
+```
+
+#### Finished!
+
+## Uninstallation
+
+The provided `remove_unit.sh` script can be used to remove the `systemd` unit. The `/opt/bin` needs to be deleted manually if desired.
+
+## Usage examples
+
 Client side:
 ```
 core@core-1 ~ $ docker run -it --volume-driver rbd -v foo:/foo alpine /bin/sh -c "echo -n 'hello ' > /foo/hw.txt"
@@ -9,56 +46,41 @@ core@core-1 ~ $ docker run -it --volume-driver rbd -v foo:/foo alpine /bin/sh -c
 core@core-1 ~ $ docker run -it --volume-driver rbd -v foo:/foo alpine cat /foo/hw.txt
 hello world
 ```
+
+The last command should also produce the same result on all host where you installed `docker-volume-rbd`:
+```
+core@core-2 ~ $ docker run -it --volume-driver rbd -v foo:/foo alpine cat /foo/hw.txt
+hello world
+```
+
 Server side:
 ```
-core@core-1 ~ $ sudo ./docker-volume-rbd
-2015/09/29 13:52:23 [Init] INFO volume root is /var/lib/docker/volumes/rbd
-2015/09/29 13:52:23 [Init] INFO loading RBD kernel module...
-2015/09/29 13:52:23 [Init] INFO listening on /var/run/docker/plugins/rbd.sock
-2015/09/29 13:52:30 [Create] INFO image does not exists. Creating it now...
-2015/09/29 13:52:33 [Mount] INFO locking image foo
-2015/09/29 13:52:33 [Mount] INFO mapping image foo
-2015/09/29 13:52:34 [Mount] INFO creating /var/lib/docker/volumes/rbd/rbd/foo
-2015/09/29 13:52:34 [Mount] INFO mounting device /dev/rbd0
-2015/09/29 13:52:34 [Unmount] INFO unmounting device /dev/rbd0
-2015/09/29 13:52:34 [Unmount] INFO unmapping image foo
-2015/09/29 13:52:34 [Unmount] INFO unlocking image foo
-2015/09/29 13:52:40 [Mount] INFO locking image foo
-2015/09/29 13:52:40 [Mount] INFO mapping image foo
-2015/09/29 13:52:41 [Mount] INFO creating /var/lib/docker/volumes/rbd/rbd/foo
-2015/09/29 13:52:41 [Mount] INFO mounting device /dev/rbd0
-2015/09/29 13:52:41 [Unmount] INFO unmounting device /dev/rbd0
-2015/09/29 13:52:41 [Unmount] INFO unmapping image foo
-2015/09/29 13:52:42 [Unmount] INFO unlocking image foo
-2015/09/29 13:52:48 [Mount] INFO locking image foo
-2015/09/29 13:52:48 [Mount] INFO mapping image foo
-2015/09/29 13:52:49 [Mount] INFO creating /var/lib/docker/volumes/rbd/rbd/foo
-2015/09/29 13:52:49 [Mount] INFO mounting device /dev/rbd0
-2015/09/29 13:52:49 [Unmount] INFO unmounting device /dev/rbd0
-2015/09/29 13:52:49 [Unmount] INFO unmapping image foo
-2015/09/29 13:52:49 [Unmount] INFO unlocking image foo
+core@core-1 ~ $ sudo journalctl -u docker-rbd-volume-driver.service
+Jan 26 09:34:39 core-1 systemd[1]: Started Docker RBD volume driver.
+Jan 26 09:34:39 core-1 docker-volume-rdb[2802]: 2016/01/26 09:34:39 main.go:97: [Init] INFO volume root is /var/lib/docker-volumes/rbd
+Jan 26 09:34:39 core-1 docker-volume-rdb[2802]: 2016/01/26 09:34:39 driver.go:83: [Init] INFO loading RBD kernel module...
+Jan 26 09:34:39 core-1 docker-volume-rdb[2802]: 2016/01/26 09:34:39 main.go:102: [Init] INFO listening on /var/run/docker/plugins/rbd.sock
+Jan 26 09:35:50 core-1 docker-volume-rdb[2802]: 2016/01/26 09:35:50 driver.go:212: [Mount] INFO locking image foo
+Jan 26 09:35:51 core-1 docker-volume-rdb[2802]: 2016/01/26 09:35:51 driver.go:220: [Mount] INFO mapping image foo
+Jan 26 09:35:51 core-1 docker-volume-rdb[2802]: 2016/01/26 09:35:51 driver.go:230: [Mount] INFO creating /var/lib/docker-volumes/rbd/rbd/foo
+Jan 26 09:35:51 core-1 docker-volume-rdb[2802]: 2016/01/26 09:35:51 driver.go:240: [Mount] INFO mounting device /dev/rbd0
+Jan 26 09:35:52 core-1 docker-volume-rdb[2802]: 2016/01/26 09:35:52 driver.go:293: [Unmount] INFO unmounting device /dev/rbd0
+Jan 26 09:35:52 core-1 docker-volume-rdb[2802]: 2016/01/26 09:35:52 driver.go:300: [Unmount] INFO unmapping image foo
+Jan 26 09:35:52 core-1 docker-volume-rdb[2802]: 2016/01/26 09:35:52 driver.go:307: [Unmount] INFO unlocking image foo
 ```
 
-##### CoreOS
-If you are a CoreOS user (like me) you must provide a way to run the `rbd` command.  
-I have my Ceph config in `/etc/ceph` and `/var/lib/ceph` (on the host) so I can do this:
+## Further info for CoreOS
 
-###### With `docker`:
-```
-core@core-1 ~ $ cat /opt/bin/rbd
-#!/bin/bash
-docker run -i --rm \
---privileged \
---pid host \
---net host \
---volume /dev:/dev \
---volume /sys:/sys \
---volume /etc/ceph:/etc/ceph \
---volume /var/lib/ceph:/var/lib/ceph \
-h0tbird/ceph:v9.2.0-2 $(basename $0) "$@"
-```
+### `rbd` command
 
-###### With `systemd-nspawn`:
+#### With Docker wrapper:
+
+If you are a CoreOS user you must provide a way to run the `rbd` command. The `install.sh` script will create a wrapper script around the `ceph` Docker image at `/opt/bin/rbd`
+
+#### With `systemd-nspawn`:
+
+If you prefer to use `systemd-nspawn` you need to replace the script located at `/opt/bin/rbd` with the one below:
+
 ```
 core@core-1 ~ $ cat /opt/bin/rbd
 #!/bin/bash

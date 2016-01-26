@@ -13,7 +13,7 @@ cp "$PWD"/scripts/rbd $TARGET_DIR
 chmod +x $TARGET_DIR/rbd
 
 # Compile using golang image
-docker run --rm -e GOBIN=/usr/src/docker-volume-rdb/bin -v "$PWD"/driver:/usr/src/docker-volume-rdb -w /usr/src/docker-volume-rdb golang:1.4 go get && go build -v 2> error.log
+docker run --rm -e GOBIN=/usr/src/docker-volume-rdb/bin -v "$PWD"/driver:/usr/src/docker-volume-rdb -w /usr/src/docker-volume-rdb golang:1.4 go get && go build -v 2> /dev/null
 
 # Copy binary 
 cp "$PWD"/driver/bin/docker-volume-rdb $TARGET_DIR
@@ -32,3 +32,6 @@ systemctl enable docker-rbd-volume-driver.service
 
 # Start unit
 systemctl start docker-rbd-volume-driver.service
+
+# Remove golang image
+docker rmi -f golang:1.4

@@ -9,9 +9,9 @@ systemctl stop docker-rbd-volume-driver.service
 # Remove service
 systemctl disable docker-rbd-volume-driver.service
 
-# Delete service files
-rm -rf /etc/systemd/system/docker-rbd-volume-driver.service
-rm -rf /etc/systemd/system/docker-rbd-volume-driver.service.d/
+# Reload
+systemctl daemon-reload
 
-# Delete files in target directory
-#rm -rf $TARGET_DIR
+# Delete service files
+rm /etc/systemd/system/docker-rbd-volume-driver.service
+rm -rf /etc/systemd/system/docker-rbd-volume-driver.service.d/

@@ -20,15 +20,15 @@ core@core-1 ~ $ modprobe rbd
 
 ```
 core@core-1 ~ $ cd /tmp
-core@core-1 ~ $ git clone https://github.com/tobilg/docker-volume-rbd.git
+core@core-1 /tmp $ git clone https://github.com/tobilg/docker-volume-rbd.git
 ```
 
 #### Run installation script
 
 ```
-core@core-1 ~ $ cd docker-volume-rbd
-core@core-1 ~ $ chmod +x install.sh
-core@core-1 ~ $ sudo ./install.sh
+core@core-1 /tmp $ cd docker-volume-rbd
+core@core-1 /tmp/docker-volume-rbd $ chmod +x install.sh
+core@core-1 /tmp/docker-volume-rbd $ sudo ./install.sh
 ```
 
 #### Finished!

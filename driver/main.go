@@ -25,6 +25,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"path/filepath"
 
 	// Community:
@@ -93,6 +95,13 @@ func usage() {
 
 func main() {
 
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT)
+
 	// Request handler with a driver implementation
 	log.Printf("[Init] INFO volume root is %s\n", *volRoot)
 	d := initDriver(*volRoot, *defPool, *defFsType, *defSize)
@@ -101,4 +110,8 @@ func main() {
 	// Listen for requests in a unix socket:
 	log.Printf("[Init] INFO listening on %s\n", socket)
 	fmt.Println(h.ServeUnix("", socket))
+
+	// Wait for termination
+	s := <-sigc
+	os.Exit(1)
 }

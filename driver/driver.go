@@ -10,18 +10,18 @@ package main
 
 import (
 
-	// Standard library:
-	"errors"
-	"log"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"regexp"
-	"strconv"
-	"strings"
+        // Standard library:
+        "errors"
+        "log"
+        "os"
+        "os/exec"
+        "path/filepath"
+        "regexp"
+        "strconv"
+        "strings"
 
-	// Community:
-	"github.com/docker/go-plugins-helpers/volume"
+        // Community:
+        "github.com/docker/go-plugins-helpers/volume"
 )
 
 //-----------------------------------------------------------------------------
@@ -35,9 +35,9 @@ const lockID = "dockerLock"
 //-----------------------------------------------------------------------------
 
 var (
-	commands  = [...]string{"modprobe", "rbd", "mount", "umount"}
-	nameRegex = regexp.MustCompile(`^(([-_.[:alnum:]]+)/)?([-_.[:alnum:]]+)(@([0-9]+))?$`)
-	lockRegex = regexp.MustCompile(`^(client.[0-9]+) ` + lockID)
+        commands  = [...]string{"modprobe", "rbd", "mount", "umount"}
+        nameRegex = regexp.MustCompile(`^(([-_.[:alnum:]]+)/)?([-_.[:alnum:]]+)(@([0-9]+))?$`)
+        lockRegex = regexp.MustCompile(`^(client.[0-9]+) ` + lockID)
 )
 
 //-----------------------------------------------------------------------------
@@ -45,20 +45,20 @@ var (
 //-----------------------------------------------------------------------------
 
 type _volume struct {
-	name   string
-	device string
-	locker string
-	fstype string
-	pool   string
+        name   string
+        device string
+        locker string
+        fstype string
+        pool   string
 }
 
 type rbdDriver struct {
-	volRoot   string
-	defPool   string
-	defFsType string
-	defSize   int
-	cmd       map[string]string
-	volumes   map[string]*_volume
+        volRoot   string
+        defPool   string
+        defFsType string
+        defSize   int
+        cmd       map[string]string
+        volumes   map[string]*_volume
 }
 
 //-----------------------------------------------------------------------------
@@ -67,35 +67,49 @@ type rbdDriver struct {
 
 func initDriver(volRoot, defPool, defFsType string, defSize int) rbdDriver {
 
-	// Variables
-	var err error
-	cmd := make(map[string]string)
+        // Variables
+        var err error
+        cmd := make(map[string]string)
 
-	// Search for binaries
-	for _, i := range commands {
-		cmd[i], err = exec.LookPath(i)
-		if err != nil {
-			log.Fatal("[Init] ERROR make sure binary %s is in your PATH", i)
-		}
-	}
+        // Search for binaries
+        for _, i := range commands {
+                cmd[i], err = exec.LookPath(i)
+                if err != nil {
+                        log.Fatal("[Init] ERROR make sure binary %s is in your PATH", i)
+                }
+        }
 
-	// Load RBD kernel module
-	log.Printf("[Init] INFO loading RBD kernel module...")
-	if err = exec.Command(cmd["modprobe"], "rbd").Run(); err != nil {
-		log.Fatal("[Init] ERROR unable to load RBD kernel module")
-	}
+        // Load RBD kernel module
+        log.Printf("[Init] INFO loading RBD kernel module...")
+        if err = exec.Command(cmd["modprobe"], "rbd").Run(); err != nil {
+                log.Fatal("[Init] ERROR unable to load RBD kernel module")
+        }
 
-	// Initialize the struct
-	driver := rbdDriver{
-		volRoot:   volRoot,
-		defPool:   defPool,
-		defFsType: defFsType,
-		defSize:   defSize,
-		cmd:       cmd,
-		volumes:   map[string]*_volume{},
-	}
+        // Initialize the struct
+        driver := rbdDriver{
+                volRoot:   volRoot,
+                defPool:   defPool,
+                defFsType: defFsType,
+                defSize:   defSize,
+                cmd:       cmd,
+                volumes:   map[string]*_volume{},
+        }
 
-	return driver
+        return driver
+}
+
+//-----------------------------------------------------------------------------
+// POST /VolumeDriver.Get
+//-----------------------------------------------------------------------------
+func (d *rbdDriver) Get(r volume.Request) volume.Response {
+        return volume.Response{Err: "not yet implemented"}
+}
+
+//-----------------------------------------------------------------------------
+// POST /VolumeDriver.List
+//-----------------------------------------------------------------------------
+func (d *rbdDriver) List(r volume.Request) volume.Response {
+        return volume.Response{Err: "not yet implemented"}
 }
 
 //-----------------------------------------------------------------------------
@@ -114,32 +128,32 @@ func initDriver(volRoot, defPool, defFsType string, defSize int) rbdDriver {
 
 func (d *rbdDriver) Create(r volume.Request) volume.Response {
 
-	// Parse the docker --volume option
-	pool, name, size, err := d.parsePoolNameSize(r.Name)
-	if err != nil {
-		log.Printf("[Create] ERROR parsing volume: %s", err)
-		return volume.Response{Err: err.Error()}
-	}
+        // Parse the docker --volume option
+        pool, name, size, err := d.parsePoolNameSize(r.Name)
+        if err != nil {
+                log.Printf("[Create] ERROR parsing volume: %s", err)
+                return volume.Response{Err: err.Error()}
+        }
 
-	// Check if volume already exists
-	mountpoint := filepath.Join(d.volRoot, pool, name)
-	if _, found := d.volumes[mountpoint]; found {
-		log.Println("[Create] INFO volume is already in known mounts: " + mountpoint)
-		return volume.Response{}
-	}
+        // Check if volume already exists
+        mountpoint := filepath.Join(d.volRoot, pool, name)
+        if _, found := d.volumes[mountpoint]; found {
+                log.Println("[Create] INFO volume is already in known mounts: " + mountpoint)
+                return volume.Response{}
+        }
 
-	// Create RBD image if not exists
-	if exists, err := d.imageExists(pool, name); !exists && err == nil {
-		log.Println("[Create] INFO image does not exists. Creating it now...")
-		if err = d.createImage(pool, name, d.defFsType, size); err != nil {
-			return volume.Response{Err: err.Error()}
-		}
-	} else if err != nil {
-		log.Printf("[Create] ERROR checking for RBD Image: %s", err)
-		return volume.Response{Err: err.Error()}
-	}
+        // Create RBD image if not exists
+        if exists, err := d.imageExists(pool, name); !exists && err == nil {
+                log.Println("[Create] INFO image does not exists. Creating it now...")
+                if err = d.createImage(pool, name, d.defFsType, size); err != nil {
+                        return volume.Response{Err: err.Error()}
+                }
+        } else if err != nil {
+                log.Printf("[Create] ERROR checking for RBD Image: %s", err)
+                return volume.Response{Err: err.Error()}
+        }
 
-	return volume.Response{}
+        return volume.Response{}
 }
 
 //-----------------------------------------------------------------------------
@@ -156,7 +170,7 @@ func (d *rbdDriver) Create(r volume.Request) volume.Response {
 //-----------------------------------------------------------------------------
 
 func (d *rbdDriver) Remove(r volume.Request) volume.Response {
-	return volume.Response{}
+        return volume.Response{}
 }
 
 //-----------------------------------------------------------------------------
@@ -174,15 +188,15 @@ func (d *rbdDriver) Remove(r volume.Request) volume.Response {
 
 func (d *rbdDriver) Path(r volume.Request) volume.Response {
 
-	// Parse the docker --volume option
-	pool, name, _, err := d.parsePoolNameSize(r.Name)
-	if err != nil {
-		log.Printf("[Path] ERROR parsing volume: %s", err)
-		return volume.Response{Err: err.Error()}
-	}
+        // Parse the docker --volume option
+        pool, name, _, err := d.parsePoolNameSize(r.Name)
+        if err != nil {
+                log.Printf("[Path] ERROR parsing volume: %s", err)
+                return volume.Response{Err: err.Error()}
+        }
 
-	mountpoint := filepath.Join(d.volRoot, pool, name)
-	return volume.Response{Mountpoint: mountpoint}
+        mountpoint := filepath.Join(d.volRoot, pool, name)
+        return volume.Response{Mountpoint: mountpoint}
 }
 
 //-----------------------------------------------------------------------------
@@ -201,60 +215,60 @@ func (d *rbdDriver) Path(r volume.Request) volume.Response {
 
 func (d *rbdDriver) Mount(r volume.Request) volume.Response {
 
-	// Parse the docker --volume option
-	pool, name, _, err := d.parsePoolNameSize(r.Name)
-	if err != nil {
-		log.Printf("[Mount] ERROR parsing volume: %s", err)
-		return volume.Response{Err: err.Error()}
-	}
+        // Parse the docker --volume option
+        pool, name, _, err := d.parsePoolNameSize(r.Name)
+        if err != nil {
+                log.Printf("[Mount] ERROR parsing volume: %s", err)
+                return volume.Response{Err: err.Error()}
+        }
 
-	// Add image lock
-	log.Printf("[Mount] INFO locking image %s", name)
-	locker, err := d.lockImage(pool, name, lockID)
-	if err != nil {
-		log.Printf("[Mount] ERROR locking image: %s", err)
-		return volume.Response{Err: err.Error()}
-	}
+        // Add image lock
+        log.Printf("[Mount] INFO locking image %s", name)
+        locker, err := d.lockImage(pool, name, lockID)
+        if err != nil {
+                log.Printf("[Mount] ERROR locking image: %s", err)
+                return volume.Response{Err: err.Error()}
+        }
 
-	// Map the image to a kernel device
-	log.Printf("[Mount] INFO mapping image %s", name)
-	device, err := d.mapImage(pool, name)
-	if err != nil {
-		defer d.unlockImage(pool, name, lockID, locker)
-		log.Printf("[Mount] ERROR mapping image: %s", err)
-		return volume.Response{Err: err.Error()}
-	}
+        // Map the image to a kernel device
+        log.Printf("[Mount] INFO mapping image %s", name)
+        device, err := d.mapImage(pool, name)
+        if err != nil {
+                defer d.unlockImage(pool, name, lockID, locker)
+                log.Printf("[Mount] ERROR mapping image: %s", err)
+                return volume.Response{Err: err.Error()}
+        }
 
-	// Create mountpoint
-	mountpoint := filepath.Join(d.volRoot, pool, name)
-	log.Printf("[Mount] INFO creating %s", mountpoint)
-	err = os.MkdirAll(mountpoint, os.ModeDir|os.FileMode(int(0775)))
-	if err != nil {
-		defer d.unmapImage(device)
-		defer d.unlockImage(pool, name, lockID, locker)
-		log.Printf("[Mount] ERROR creating mount point: %s", err)
-		return volume.Response{Err: err.Error()}
-	}
+        // Create mountpoint
+        mountpoint := filepath.Join(d.volRoot, pool, name)
+        log.Printf("[Mount] INFO creating %s", mountpoint)
+        err = os.MkdirAll(mountpoint, os.ModeDir|os.FileMode(int(0775)))
+        if err != nil {
+                defer d.unmapImage(device)
+                defer d.unlockImage(pool, name, lockID, locker)
+                log.Printf("[Mount] ERROR creating mount point: %s", err)
+                return volume.Response{Err: err.Error()}
+        }
 
-	// Mount the device
-	log.Printf("[Mount] INFO mounting device %s", device)
-	if err = d.mountDevice(device, mountpoint, d.defFsType); err != nil {
-		defer d.unmapImage(device)
-		defer d.unlockImage(pool, name, lockID, locker)
-		log.Printf("[Mount] ERROR mounting device: %s", err)
-		return volume.Response{Err: err.Error()}
-	}
+        // Mount the device
+        log.Printf("[Mount] INFO mounting device %s", device)
+        if err = d.mountDevice(device, mountpoint, d.defFsType); err != nil {
+                defer d.unmapImage(device)
+                defer d.unlockImage(pool, name, lockID, locker)
+                log.Printf("[Mount] ERROR mounting device: %s", err)
+                return volume.Response{Err: err.Error()}
+        }
 
-	// Add to list of volumes
-	d.volumes[mountpoint] = &_volume{
-		name:   name,
-		device: device,
-		locker: locker,
-		fstype: d.defFsType,
-		pool:   pool,
-	}
+        // Add to list of volumes
+        d.volumes[mountpoint] = &_volume{
+                name:   name,
+                device: device,
+                locker: locker,
+                fstype: d.defFsType,
+                pool:   pool,
+        }
 
-	return volume.Response{Mountpoint: mountpoint}
+        return volume.Response{Mountpoint: mountpoint}
 }
 
 //-----------------------------------------------------------------------------
@@ -273,46 +287,46 @@ func (d *rbdDriver) Mount(r volume.Request) volume.Response {
 
 func (d *rbdDriver) Unmount(r volume.Request) volume.Response {
 
-	// Parse the docker --volume option
-	pool, name, _, err := d.parsePoolNameSize(r.Name)
-	if err != nil {
-		log.Printf("[Unmount] ERROR parsing volume: %s", err)
-		return volume.Response{Err: err.Error()}
-	}
+        // Parse the docker --volume option
+        pool, name, _, err := d.parsePoolNameSize(r.Name)
+        if err != nil {
+                log.Printf("[Unmount] ERROR parsing volume: %s", err)
+                return volume.Response{Err: err.Error()}
+        }
 
-	// Retrieve volume state
-	mountpoint := filepath.Join(d.volRoot, pool, name)
-	vol, found := d.volumes[mountpoint]
-	if !found {
-		err = errors.New("No state found")
-		log.Printf("[Unmount] ERROR retrieving state: %s", err)
-		return volume.Response{Err: err.Error()}
-	}
+        // Retrieve volume state
+        mountpoint := filepath.Join(d.volRoot, pool, name)
+        vol, found := d.volumes[mountpoint]
+        if !found {
+                err = errors.New("No state found")
+                log.Printf("[Unmount] ERROR retrieving state: %s", err)
+                return volume.Response{Err: err.Error()}
+        }
 
-	// Unmount the device
-	log.Printf("[Unmount] INFO unmounting device %s", vol.device)
-	if err := d.unmountDevice(vol.device); err != nil {
-		log.Printf("[Unmount] ERROR unmounting device: %s", err)
-		return volume.Response{Err: err.Error()}
-	}
+        // Unmount the device
+        log.Printf("[Unmount] INFO unmounting device %s", vol.device)
+        if err := d.unmountDevice(vol.device); err != nil {
+                log.Printf("[Unmount] ERROR unmounting device: %s", err)
+                return volume.Response{Err: err.Error()}
+        }
 
-	// Unmap the image
-	log.Printf("[Unmount] INFO unmapping image %s", name)
-	if err = d.unmapImage(vol.device); err != nil {
-		log.Printf("[Unmount] ERROR unmapping image: %s", err)
-		return volume.Response{Err: err.Error()}
-	}
+        // Unmap the image
+        log.Printf("[Unmount] INFO unmapping image %s", name)
+        if err = d.unmapImage(vol.device); err != nil {
+                log.Printf("[Unmount] ERROR unmapping image: %s", err)
+                return volume.Response{Err: err.Error()}
+        }
 
-	// Unlock the image
-	log.Printf("[Unmount] INFO unlocking image %s", name)
-	if err = d.unlockImage(vol.pool, vol.name, lockID, vol.locker); err != nil {
-		log.Printf("[Unmount] ERROR unlocking image: %s", err)
-		return volume.Response{Err: err.Error()}
-	}
+        // Unlock the image
+        log.Printf("[Unmount] INFO unlocking image %s", name)
+        if err = d.unlockImage(vol.pool, vol.name, lockID, vol.locker); err != nil {
+                log.Printf("[Unmount] ERROR unlocking image: %s", err)
+                return volume.Response{Err: err.Error()}
+        }
 
-	// Forget the volume
-	delete(d.volumes, mountpoint)
-	return volume.Response{}
+        // Forget the volume
+        delete(d.volumes, mountpoint)
+        return volume.Response{}
 }
 
 //-----------------------------------------------------------------------------
@@ -321,32 +335,32 @@ func (d *rbdDriver) Unmount(r volume.Request) volume.Response {
 
 func (d *rbdDriver) parsePoolNameSize(src string) (string, string, int, error) {
 
-	sub := nameRegex.FindStringSubmatch(src)
+        sub := nameRegex.FindStringSubmatch(src)
 
-	if len(sub) != 6 {
-		return "", "", 0, errors.New("Unable to parse docker --volume option: %s" + src)
-	}
+        if len(sub) != 6 {
+                return "", "", 0, errors.New("Unable to parse docker --volume option: %s" + src)
+        }
 
-	// Set defaults
-	pool := d.defPool
-	name := sub[3]
-	size := d.defSize
+        // Set defaults
+        pool := d.defPool
+        name := sub[3]
+        size := d.defSize
 
-	// Pool overwrite
-	if sub[2] != "" {
-		pool = sub[2]
-	}
+        // Pool overwrite
+        if sub[2] != "" {
+                pool = sub[2]
+        }
 
-	// Size overwrite
-	if sub[5] != "" {
-		var err error
-		size, err = strconv.Atoi(sub[5])
-		if err != nil {
-			size = d.defSize
-		}
-	}
+        // Size overwrite
+        if sub[5] != "" {
+                var err error
+                size, err = strconv.Atoi(sub[5])
+                if err != nil {
+                        size = d.defSize
+                }
+        }
 
-	return pool, name, size, nil
+        return pool, name, size, nil
 }
 
 //-----------------------------------------------------------------------------
@@ -355,21 +369,21 @@ func (d *rbdDriver) parsePoolNameSize(src string) (string, string, int, error) {
 
 func (d *rbdDriver) imageExists(pool, name string) (bool, error) {
 
-	// List RBD images
-	out, err := exec.Command(d.cmd["rbd"], "ls", pool).Output()
-	if err != nil {
-		return false, errors.New("Unable to list images")
-	}
+        // List RBD images
+        out, err := exec.Command(d.cmd["rbd"], "ls", pool).Output()
+        if err != nil {
+                return false, errors.New("Unable to list images")
+        }
 
-	// Parse the output
-	list := strings.Split(string(out), "\n")
-	for _, item := range list {
-		if item == name {
-			return true, nil
-		}
-	}
+        // Parse the output
+        list := strings.Split(string(out), "\n")
+        for _, item := range list {
+                if item == name {
+                        return true, nil
+                }
+        }
 
-	return false, nil
+        return false, nil
 }
 
 //-----------------------------------------------------------------------------
@@ -378,49 +392,49 @@ func (d *rbdDriver) imageExists(pool, name string) (bool, error) {
 
 func (d *rbdDriver) createImage(pool, name, fstype string, size int) error {
 
-	// Create the image device
-	err := exec.Command(
-		d.cmd["rbd"], "create",
-		"--pool", pool,
-		"--size", strconv.Itoa(size),
-		name,
-	).Run()
+        // Create the image device
+        err := exec.Command(
+                d.cmd["rbd"], "create",
+                "--pool", pool,
+                "--size", strconv.Itoa(size),
+                name,
+        ).Run()
 
-	if err != nil {
-		return errors.New("Unable to create the image device")
-	}
+        if err != nil {
+                return errors.New("Unable to create the image device")
+        }
 
-	// Add image lock
-	locker, err := d.lockImage(pool, name, lockID)
-	if err != nil {
-		return err
-	}
+        // Add image lock
+        locker, err := d.lockImage(pool, name, lockID)
+        if err != nil {
+                return err
+        }
 
-	// Map the image to a kernel device
-	device, err := d.mapImage(pool, name)
-	if err != nil {
-		defer d.unlockImage(pool, name, lockID, locker)
-		return err
-	}
+        // Map the image to a kernel device
+        device, err := d.mapImage(pool, name)
+        if err != nil {
+                defer d.unlockImage(pool, name, lockID, locker)
+                return err
+        }
 
-	// Make the filesystem
-	if err = d.makeFs(device, d.defFsType); err != nil {
-		defer d.unmapImage(device)
-		defer d.unlockImage(pool, name, lockID, locker)
-		return err
-	}
+        // Make the filesystem
+        if err = d.makeFs(device, d.defFsType); err != nil {
+                defer d.unmapImage(device)
+                defer d.unlockImage(pool, name, lockID, locker)
+                return err
+        }
 
-	// Unmap the image from kernel device
-	if err = d.unmapImage(device); err != nil {
-		return err
-	}
+        // Unmap the image from kernel device
+        if err = d.unmapImage(device); err != nil {
+                return err
+        }
 
-	// Remove image lock
-	if err = d.unlockImage(pool, name, lockID, locker); err != nil {
-		return err
-	}
+        // Remove image lock
+        if err = d.unlockImage(pool, name, lockID, locker); err != nil {
+                return err
+        }
 
-	return nil
+        return nil
 }
 
 //-----------------------------------------------------------------------------
@@ -429,39 +443,39 @@ func (d *rbdDriver) createImage(pool, name, fstype string, size int) error {
 
 func (d *rbdDriver) lockImage(pool, name, lockID string) (string, error) {
 
-	// Lock the image
-	err := exec.Command(
-		d.cmd["rbd"], "lock",
-		"add", "--pool", pool,
-		name, lockID,
-	).Run()
+        // Lock the image
+        err := exec.Command(
+                d.cmd["rbd"], "lock",
+                "add", "--pool", pool,
+                name, lockID,
+        ).Run()
 
-	if err != nil {
-		return "", errors.New("Unable to lock the image")
-	}
+        if err != nil {
+                return "", errors.New("Unable to lock the image")
+        }
 
-	// List the locks
-	out, err := exec.Command(
-		d.cmd["rbd"], "lock", "list",
-		"--pool", pool, name,
-	).Output()
+        // List the locks
+        out, err := exec.Command(
+                d.cmd["rbd"], "lock", "list",
+                "--pool", pool, name,
+        ).Output()
 
-	if err != nil {
-		return "", errors.New("Unable to list the image locks")
-	}
+        if err != nil {
+                return "", errors.New("Unable to list the image locks")
+        }
 
-	// Parse the locker ID
-	lines := strings.Split(string(out), "\n")
-	if len(lines) > 1 {
-		for _, line := range lines[1:] {
-			sub := lockRegex.FindStringSubmatch(line)
-			if len(sub) == 2 {
-				return sub[1], nil
-			}
-		}
-	}
+        // Parse the locker ID
+        lines := strings.Split(string(out), "\n")
+        if len(lines) > 1 {
+                for _, line := range lines[1:] {
+                        sub := lockRegex.FindStringSubmatch(line)
+                        if len(sub) == 2 {
+                                return sub[1], nil
+                        }
+                }
+        }
 
-	return "", errors.New("Unable to parse locker ID")
+        return "", errors.New("Unable to parse locker ID")
 }
 
 //-----------------------------------------------------------------------------
@@ -470,17 +484,17 @@ func (d *rbdDriver) lockImage(pool, name, lockID string) (string, error) {
 
 func (d *rbdDriver) unlockImage(pool, name, lockID, locker string) error {
 
-	// Unlock the image
-	err := exec.Command(
-		d.cmd["rbd"], "lock", "remove",
-		name, lockID, locker,
-	).Run()
+        // Unlock the image
+        err := exec.Command(
+                d.cmd["rbd"], "lock", "remove",
+                name, lockID, locker,
+        ).Run()
 
-	if err != nil {
-		return errors.New("Unable to unlock the image")
-	}
+        if err != nil {
+                return errors.New("Unable to unlock the image")
+        }
 
-	return nil
+        return nil
 }
 
 //-----------------------------------------------------------------------------
@@ -489,18 +503,18 @@ func (d *rbdDriver) unlockImage(pool, name, lockID, locker string) error {
 
 func (d *rbdDriver) mapImage(pool, name string) (string, error) {
 
-	// Map the image to a kernel device
-	out, err := exec.Command(
-		d.cmd["rbd"], "map",
-		"--pool", pool, name,
-	).Output()
+        // Map the image to a kernel device
+        out, err := exec.Command(
+                d.cmd["rbd"], "map",
+                "--pool", pool, name,
+        ).Output()
 
-	if err != nil {
-		return "", errors.New("Unable to map the image to a kernel device")
-	}
+        if err != nil {
+                return "", errors.New("Unable to map the image to a kernel device")
+        }
 
-	// Parse the device
-	return strings.TrimSpace(string(out)), nil
+        // Parse the device
+        return strings.TrimSpace(string(out)), nil
 }
 
 //-----------------------------------------------------------------------------
@@ -509,16 +523,16 @@ func (d *rbdDriver) mapImage(pool, name string) (string, error) {
 
 func (d *rbdDriver) unmapImage(device string) error {
 
-	// Unmap the image from a kernel device
-	err := exec.Command(
-		d.cmd["rbd"], "unmap", device,
-	).Run()
+        // Unmap the image from a kernel device
+        err := exec.Command(
+                d.cmd["rbd"], "unmap", device,
+        ).Run()
 
-	if err != nil {
-		return errors.New("Unable to unmap the image from " + device)
-	}
+        if err != nil {
+                return errors.New("Unable to unmap the image from " + device)
+        }
 
-	return nil
+        return nil
 }
 
 //-----------------------------------------------------------------------------
@@ -527,18 +541,18 @@ func (d *rbdDriver) unmapImage(device string) error {
 
 func (d *rbdDriver) makeFs(device, fsType string) error {
 
-	// Search for mkfs
-	mkfs, err := exec.LookPath("mkfs." + d.defFsType)
-	if err != nil {
-		return errors.New("Unable to find mkfs." + d.defFsType)
-	}
+        // Search for mkfs
+        mkfs, err := exec.LookPath("mkfs." + d.defFsType)
+        if err != nil {
+                return errors.New("Unable to find mkfs." + d.defFsType)
+        }
 
-	// Make the file system
-	if err = exec.Command(mkfs, device).Run(); err != nil {
-		return errors.New("Unable to make file system on " + device)
-	}
+        // Make the file system
+        if err = exec.Command(mkfs, device).Run(); err != nil {
+                return errors.New("Unable to make file system on " + device)
+        }
 
-	return nil
+        return nil
 }
 
 //-----------------------------------------------------------------------------
@@ -547,18 +561,18 @@ func (d *rbdDriver) makeFs(device, fsType string) error {
 
 func (d *rbdDriver) mountDevice(device, mountpoint, fsType string) error {
 
-	// Mount the device
-	err := exec.Command(
-		d.cmd["mount"],
-		"-t", fsType,
-		device, mountpoint,
-	).Run()
+        // Mount the device
+        err := exec.Command(
+                d.cmd["mount"],
+                "-t", fsType,
+                device, mountpoint,
+        ).Run()
 
-	if err != nil {
-		return errors.New("Unable to mount " + device + "on " + mountpoint)
-	}
+        if err != nil {
+                return errors.New("Unable to mount " + device + "on " + mountpoint)
+        }
 
-	return nil
+        return nil
 }
 
 //-----------------------------------------------------------------------------
@@ -567,10 +581,10 @@ func (d *rbdDriver) mountDevice(device, mountpoint, fsType string) error {
 
 func (d *rbdDriver) unmountDevice(device string) error {
 
-	// Unmount the device
-	if err := exec.Command(d.cmd["umount"], device).Run(); err != nil {
-		return errors.New("Unable to umount " + device)
-	}
+        // Unmount the device
+        if err := exec.Command(d.cmd["umount"], device).Run(); err != nil {
+                return errors.New("Unable to umount " + device)
+        }
 
-	return nil
+        return nil
 }

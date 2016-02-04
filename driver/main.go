@@ -112,6 +112,6 @@ func main() {
 	fmt.Println(h.ServeUnix("", socket))
 
 	// Wait for termination
-	s := <-sigc
-	os.Exit(1)
+	<-sigc
+	os.Exit(0)
 }

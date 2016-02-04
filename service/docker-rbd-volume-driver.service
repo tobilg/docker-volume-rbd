@@ -5,7 +5,7 @@ Requires=docker.service
 
 [Service]
 ExecStart=/opt/bin/docker-volume-rdb
-ExecStop=/bin/kill -15 $(ps -eo pid,comm | awk '/docker-volume-r$/  {print $1; exit}')
+ExecStop=/bin/sh -c "/bin/kill -15 $(ps -eo pid,comm | awk '/docker-volume-r$/  {print $1; exit}')"
 KillMode=process
 Restart=on-failure
 RestartSec=30s
